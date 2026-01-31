@@ -1,6 +1,8 @@
 # 中国象棋 (Chinese Chess)
 
-一个基于PyQt5开发的中国象棋游戏，支持人人对战(PVP)和人机对战(PVE)模式。
+一个基于PySide6开发的中国象棋游戏，支持人人对战(PVP)和人机对战(PVE)模式。
+
+[English](README_EN.md)
 
 ## 功能特点
 
@@ -57,7 +59,7 @@ python -m venv .venv
 
 3. 安装依赖
 ```bash
-pip install PyQt5
+pip install PySide6
 ```
 
 4. 运行程序
@@ -82,6 +84,7 @@ chinese_chess/
 │   └── worker.py       # QThread异步计算
 ├── ui/                 # 界面模块
 │   ├── __init__.py
+│   ├── styles.py       # 样式常量
 │   ├── pieces.py       # 棋子图形项
 │   ├── board_view.py   # 棋盘视图(QGraphicsView)
 │   └── control_panel.py # 控制面板
@@ -89,7 +92,8 @@ chinese_chess/
 │   └── icon/          # SVG图标资源
 ├── main.py             # 主程序入口
 ├── 需求设计文档.md     # 设计文档
-└── README.md          # 本文件
+├── README.md          # 本文件
+└── README_EN.md       # 英文README
 ```
 
 ## 使用说明
@@ -98,15 +102,13 @@ chinese_chess/
 1. 选择游戏模式（人机对战/人人对战）
 2. 选择难度等级（人机模式）
 3. 选择执子颜色（人机模式）
-4. 选择界面主题
-5. 点击"开始游戏"
+4. 点击"开始游戏"
 
 ### 操作说明
 - **移动棋子**: 点击棋子选中，再点击目标位置
 - **悔棋**: 点击"悔棋"按钮（PVE模式悔两步）
 - **智能提示**: 点击"智能提示"显示最佳走法
 - **认输**: 点击"认输"结束游戏
-- **切换主题**: 在界面主题下拉框中选择
 
 ### 窗口操作
 - **拖动窗口**: 按住标题栏拖动
@@ -117,7 +119,7 @@ chinese_chess/
 ## 技术栈
 
 - **Python 3.8+**: 编程语言
-- **PyQt5**: GUI框架
+- **PySide6**: GUI框架
 - **Minimax算法**: AI搜索算法
 - **Alpha-Beta剪枝**: 搜索优化
 
@@ -143,6 +145,12 @@ MIT License
 kashima19960
 
 ## 更新日志
+
+### v1.1.0 (2026-02-01)
+- 🔄 从PyQt5迁移到PySide6
+- 🎨 UI重设计，采用Soft UI Evolution风格
+- 📝 代码重构为Google Python Style Guide规范
+- 🌐 新增英文README
 
 ### v1.0.0 (2025-11-29)
 - 🎉 首次发布

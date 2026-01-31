@@ -13,12 +13,12 @@ import os
 import sys
 import warnings
 
-# Suppress Qt warnings before importing PyQt5
+# Suppress Qt warnings before importing PySide6
 os.environ['QT_LOGGING_RULES'] = '*.debug=false;qt.qpa.fonts=false'
 
-from PyQt5.QtCore import QDir, QPoint, Qt
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QDir, QPoint, Qt
+from PySide6.QtGui import QFont, QIcon
+from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
@@ -29,11 +29,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-# Enable High DPI support before creating QApplication
-if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+# PySide6 automatically supports High DPI scaling
 
 from ai.worker import AIWorker
 from core.board import Board
@@ -564,11 +560,16 @@ def main() -> None:
     if os.path.exists(resource_path):
         QDir.addSearchPath('icon', os.path.join(resource_path, 'icon'))
     
+    # Set application icon
+    icon_path = os.path.join(resource_path, 'app_icon.png')
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
+    
     # Create and show main window
     window = MainWindow()
     window.show()
     
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

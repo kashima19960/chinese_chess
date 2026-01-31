@@ -1,7 +1,7 @@
 """Chess piece graphics items for the board view.
 
 This module provides the graphical representation of chess pieces using
-PyQt5's QGraphicsObject. Each piece is rendered as a circular item with
+PySide6's QGraphicsObject. Each piece is rendered as a circular item with
 Chinese character text.
 
 Typical usage example:
@@ -9,9 +9,9 @@ Typical usage example:
     scene.addItem(piece)
 """
 
-from PyQt5.QtCore import QRectF
-from PyQt5.QtGui import QBrush, QColor, QFont, QPen
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QRectF
+from PySide6.QtGui import QBrush, QColor, QFont, QPen
+from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsObject,

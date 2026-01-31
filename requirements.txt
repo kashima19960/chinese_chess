@@ -1,0 +1,3 @@
+# Chinese Chess - Dependencies
+# GUI Framework
+PySide6>=6.6.0

@@ -9,7 +9,7 @@ Typical usage example:
     worker.start()
 """
 
-from PyQt5.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from ai.search import get_best_move
 from core.board import Board
@@ -31,9 +31,9 @@ class AIWorker(QThread):
         error_occurred: Emitted when an error occurs (error_message).
     """
 
-    move_ready = pyqtSignal(tuple, tuple)
-    hint_ready = pyqtSignal(tuple, tuple)
-    error_occurred = pyqtSignal(str)
+    move_ready = Signal(tuple, tuple)
+    hint_ready = Signal(tuple, tuple)
+    error_occurred = Signal(str)
 
     def __init__(
         self, board: Board, mode: str = 'AI_MOVE', difficulty: str = '中级'

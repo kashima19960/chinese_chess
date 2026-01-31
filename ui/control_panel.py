@@ -9,9 +9,9 @@ Typical usage example:
     panel.start_game_clicked.connect(start_game_handler)
 """
 
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
     QGroupBox,
@@ -49,11 +49,11 @@ class ControlPanel(QWidget):
     """
     
     # Qt Signals
-    start_game_clicked = pyqtSignal()
-    undo_clicked = pyqtSignal()
-    hint_clicked = pyqtSignal()
-    resign_clicked = pyqtSignal()
-    settings_changed = pyqtSignal(str, str, str)
+    start_game_clicked = Signal()
+    undo_clicked = Signal()
+    hint_clicked = Signal()
+    resign_clicked = Signal()
+    settings_changed = Signal(str, str, str)
     
     def __init__(self) -> None:
         """Initialize the control panel."""

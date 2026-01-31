@@ -1,6 +1,6 @@
 """Board view with graphics scene for Chinese Chess.
 
-This module provides the main chess board visualization using PyQt5's
+This module provides the main chess board visualization using PySide6's
 QGraphicsView framework. It handles board rendering, piece placement,
 user interaction, and move animations.
 
@@ -12,15 +12,15 @@ Typical usage example:
 
 from typing import Dict, List, Optional, Tuple
 
-from PyQt5.QtCore import (
-    pyqtSignal,
+from PySide6.QtCore import (
+    Signal,
     QEasingCurve,
     QPointF,
     QPropertyAnimation,
     Qt,
 )
-from PyQt5.QtGui import QBrush, QColor, QPainter, QPen
-from PyQt5.QtWidgets import (
+from PySide6.QtGui import QBrush, QColor, QPainter, QPen
+from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsLineItem,
     QGraphicsRectItem,
@@ -57,8 +57,8 @@ class BoardView(QGraphicsView):
     """
     
     # Qt Signals
-    piece_clicked = pyqtSignal(int, int)
-    move_made = pyqtSignal(tuple, tuple)
+    piece_clicked = Signal(int, int)
+    move_made = Signal(tuple, tuple)
     
     def __init__(self, board: Board, cell_size: float = 60.0) -> None:
         """Initialize the board view.
