@@ -15,8 +15,10 @@
 
 ### AI功能
 - ✅ 5个难度等级（小白→大师）
-- ✅ Minimax搜索 + Alpha-Beta剪枝
-- ✅ 位置价值表评估
+- ✅ NNUE（高效可更新神经网络）评估
+- ✅ 高性能 Alpha-Beta 搜索（PVS/LMR/空着剪枝/静态搜索/置换表）
+- ✅ 走法排序（MVV-LVA、Killer/History）
+- ✅ 迭代加深 + 期望窗口（Aspiration Windows）
 - ✅ 异步计算（不阻塞UI）
 - ✅ 智能提示功能
 
@@ -59,7 +61,7 @@ python -m venv .venv
 
 3. 安装依赖
 ```bash
-pip install PySide6
+pip install -r requirements.txt
 ```
 
 4. 运行程序
@@ -79,8 +81,10 @@ chinese_chess/
 │   └── notation.py     # 中文记谱生成
 ├── ai/                 # AI模块
 │   ├── __init__.py
-│   ├── evaluation.py   # 棋局评估函数
-│   ├── search.py       # Minimax算法+Alpha-Beta剪枝
+│   ├── evaluation.py   # 评估接口（NNUE为主，经典评估为辅）
+│   ├── nnue.py         # NNUE评估网络
+│   ├── search_engine.py # 高性能搜索引擎
+│   ├── search.py       # 统一搜索接口
 │   └── worker.py       # QThread异步计算
 ├── ui/                 # 界面模块
 │   ├── __init__.py
@@ -89,7 +93,10 @@ chinese_chess/
 │   ├── board_view.py   # 棋盘视图(QGraphicsView)
 │   └── control_panel.py # 控制面板
 ├── resources/          # 资源文件
-│   └── icon/          # SVG图标资源
+│   ├── app_icon.ico    # Windows图标
+│   ├── app_icon.png    # 应用图标
+│   └── icon/           # SVG图标资源
+├── generate_icon.py    # 图标生成脚本
 ├── main.py             # 主程序入口
 ├── 需求设计文档.md     # 设计文档
 ├── README.md          # 本文件
@@ -120,8 +127,9 @@ chinese_chess/
 
 - **Python 3.8+**: 编程语言
 - **PySide6**: GUI框架
-- **Minimax算法**: AI搜索算法
-- **Alpha-Beta剪枝**: 搜索优化
+- **NNUE**: 高效可更新神经网络评估
+- **Alpha-Beta搜索**: 高性能剪枝搜索
+- **NumPy**: 数值计算加速
 
 ## 开发计划
 
@@ -145,6 +153,11 @@ MIT License
 kashima19960
 
 ## 更新日志
+
+### v1.2.0 (2026-02-01)
+- 🤖 AI引擎升级：NNUE + 高性能 Alpha-Beta 搜索
+- ⚡ 搜索优化：置换表 / LMR / 空着剪枝 / 静态搜索
+- 📦 新增 NumPy 依赖与搜索引擎模块
 
 ### v1.1.0 (2026-02-01)
 - 🔄 从PyQt5迁移到PySide6

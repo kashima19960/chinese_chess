@@ -15,8 +15,10 @@ A Chinese Chess game developed with PySide6, supporting Player vs Player (PVP) a
 
 ### AI Features
 - ✅ 5 difficulty levels (Beginner → Master)
-- ✅ Minimax search with Alpha-Beta pruning
-- ✅ Position value table evaluation
+- ✅ NNUE (Efficiently Updatable Neural Network) evaluation
+- ✅ High-performance Alpha-Beta search (PVS/LMR/Null Move/Quiescence/TT)
+- ✅ Move ordering (MVV-LVA, Killer/History heuristics)
+- ✅ Iterative deepening + aspiration windows
 - ✅ Asynchronous computation (non-blocking UI)
 - ✅ Smart hint feature
 
@@ -59,7 +61,7 @@ python -m venv .venv
 
 3. Install dependencies
 ```bash
-pip install PySide6
+pip install -r requirements.txt
 ```
 
 4. Run the program
@@ -79,8 +81,10 @@ chinese_chess/
 │   └── notation.py     # Chinese notation generation
 ├── ai/                 # AI module
 │   ├── __init__.py
-│   ├── evaluation.py   # Board evaluation function
-│   ├── search.py       # Minimax algorithm + Alpha-Beta pruning
+│   ├── evaluation.py   # Evaluation interface (NNUE primary, classical fallback)
+│   ├── nnue.py         # NNUE evaluation network
+│   ├── search_engine.py # High-performance search engine
+│   ├── search.py       # Unified search interface
 │   └── worker.py       # QThread async computation
 ├── ui/                 # UI module
 │   ├── __init__.py
@@ -89,7 +93,10 @@ chinese_chess/
 │   ├── board_view.py   # Board view (QGraphicsView)
 │   └── control_panel.py # Control panel
 ├── resources/          # Resource files
-│   └── icon/          # SVG icon resources
+│   ├── app_icon.ico    # Windows icon
+│   ├── app_icon.png    # App icon
+│   └── icon/           # SVG icon resources
+├── generate_icon.py    # Icon generator script
 ├── main.py             # Main program entry
 ├── 需求设计文档.md     # Design document
 ├── README.md          # Chinese README
@@ -120,8 +127,9 @@ chinese_chess/
 
 - **Python 3.8+**: Programming language
 - **PySide6**: GUI framework
-- **Minimax Algorithm**: AI search algorithm
-- **Alpha-Beta Pruning**: Search optimization
+- **NNUE**: Efficiently Updatable Neural Network evaluation
+- **Alpha-Beta Search**: High-performance pruning search
+- **NumPy**: Numerical computing acceleration
 
 ## Roadmap
 
@@ -145,6 +153,11 @@ MIT License
 kashima19960
 
 ## Changelog
+
+### v1.2.0 (2026-02-01)
+- 🤖 AI engine upgrade: NNUE + high-performance Alpha-Beta search
+- ⚡ Search optimizations: TT / LMR / Null Move / Quiescence
+- 📦 Added NumPy dependency and new search engine modules
 
 ### v1.1.0 (2026-02-01)
 - 🔄 Migrated from PyQt5 to PySide6
