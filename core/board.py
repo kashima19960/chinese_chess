@@ -1,56 +1,92 @@
-"""
-Board state management with FEN parsing.
+"""Board state management with FEN parsing.
+
+This module provides the Board class which manages the chess board state,
+including piece positions, move history, and FEN string conversion.
+
+Typical usage example:
+    board = Board(INITIAL_FEN)
+    board.move_piece((0, 0), (0, 1))
+    fen = board.to_fen()
 """
 
-from typing import Optional
-from .constants import *
+from typing import List, Optional, Tuple
+
+from core.constants import (
+    ALL_PIECES,
+    BLACK,
+    BLACK_PIECES,
+    BOARD_COLS,
+    BOARD_ROWS,
+    INITIAL_FEN,
+    RED,
+    RED_PIECES,
+    is_in_bounds,
+)
 
 
 class Board:
-    """中国象棋棋盘状态管理类"""
+    """Manages the Chinese Chess board state.
     
-    def __init__(self, fen: str = INITIAL_FEN):
-        """
-        初始化棋盘
+    This class handles all board operations including piece placement,
+    movement, FEN string parsing, and game history management.
+    
+    Attributes:
+        board: 2D list representing the 10x9 board grid.
+        current_player: The player to move (RED or BLACK).
+        history: List of previous FEN states for undo support.
+        move_history: List of moves made (from_pos, to_pos tuples).
+    """
+    
+    def __init__(self, fen: str = INITIAL_FEN) -> None:
+        """Initialize the board from a FEN string.
         
         Args:
-            fen: FEN字符串表示的棋盘状态
+            fen: FEN string representing the board state.
+                 Defaults to the standard starting position.
         """
-        self.board: list[list[Optional[str]]] = [[None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
-        self.current_player: int = RED  # 当前走子方
-        self.history: list[str] = []  # 历史FEN记录
-        self.move_history: list[tuple[tuple[int, int], tuple[int, int]]] = []  # 移动历史
+        self.board: List[List[Optional[str]]] = [
+            [None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)
+        ]
+        self.current_player: int = RED
+        self.history: List[str] = []
+        self.move_history: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
         
         self.load_fen(fen)
     
     def load_fen(self, fen: str) -> None:
-        """
-        从FEN字符串加载棋盘状态
+        """Load board state from a FEN string.
         
-        FEN格式: "棋盘布局 当前玩家"
-        例: "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w"
+        FEN format: "board_layout current_player"
+        Example: "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w"
+        
+        Args:
+            fen: FEN string to parse.
+        
+        Raises:
+            ValueError: If the FEN string is invalid.
         """
         parts = fen.split()
-        if len(parts) < 1:
-            raise ValueError("Invalid FEN string")
+        if not parts:
+            raise ValueError("Invalid FEN string: empty")
         
         board_str = parts[0]
         rows = board_str.split('/')
         
         if len(rows) != BOARD_ROWS:
-            raise ValueError(f"FEN must have {BOARD_ROWS} rows")
+            raise ValueError(f"FEN must have {BOARD_ROWS} rows, got {len(rows)}")
         
-        # 清空棋盘
-        self.board = [[None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
+        # Clear the board
+        self.board = [
+            [None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)
+        ]
         
-        # 解析每一行(从黑方到红方: row 9 -> 0)
+        # Parse each row (FEN starts from Black's side: row 9 -> 0)
         for i, row_str in enumerate(rows):
-            row_idx = BOARD_ROWS - 1 - i  # FEN第一行对应row=9
+            row_idx = BOARD_ROWS - 1 - i
             col_idx = 0
             
             for char in row_str:
                 if char.isdigit():
-                    # 数字表示空格数量
                     col_idx += int(char)
                 elif char in ALL_PIECES:
                     if col_idx >= BOARD_COLS:
@@ -58,18 +94,20 @@ class Board:
                     self.board[row_idx][col_idx] = char
                     col_idx += 1
         
-        # 解析当前玩家
+        # Parse current player
         if len(parts) > 1:
             self.current_player = RED if parts[1] == 'w' else BLACK
         else:
             self.current_player = RED
     
     def to_fen(self) -> str:
-        """
-        将当前棋盘状态转换为FEN字符串
+        """Convert current board state to FEN string.
+        
+        Returns:
+            FEN string representation of the board.
         """
         rows = []
-        for row_idx in range(BOARD_ROWS - 1, -1, -1):  # 从row 9到row 0
+        for row_idx in range(BOARD_ROWS - 1, -1, -1):
             row_str = ""
             empty_count = 0
             
@@ -94,26 +132,43 @@ class Board:
         return f"{board_str} {player_str}"
     
     def get_piece(self, row: int, col: int) -> Optional[str]:
-        """获取指定位置的棋子"""
+        """Get the piece at a specific position.
+        
+        Args:
+            row: Board row (0-9).
+            col: Board column (0-8).
+        
+        Returns:
+            Piece character or None if empty/out of bounds.
+        """
         if not is_in_bounds(row, col):
             return None
         return self.board[row][col]
     
     def set_piece(self, row: int, col: int, piece: Optional[str]) -> None:
-        """设置指定位置的棋子"""
+        """Set a piece at a specific position.
+        
+        Args:
+            row: Board row (0-9).
+            col: Board column (0-8).
+            piece: Piece character or None to clear.
+        """
         if is_in_bounds(row, col):
             self.board[row][col] = piece
     
-    def move_piece(self, from_pos: tuple[int, int], to_pos: tuple[int, int]) -> Optional[str]:
-        """
-        移动棋子
+    def move_piece(
+        self,
+        from_pos: Tuple[int, int],
+        to_pos: Tuple[int, int]
+    ) -> Optional[str]:
+        """Move a piece from one position to another.
         
         Args:
-            from_pos: 起始位置 (row, col)
-            to_pos: 目标位置 (row, col)
+            from_pos: Starting position (row, col).
+            to_pos: Destination position (row, col).
         
         Returns:
-            被吃掉的棋子,如果没有则返回None
+            The captured piece if any, None otherwise.
         """
         r1, c1 = from_pos
         r2, c2 = to_pos
@@ -121,30 +176,28 @@ class Board:
         piece = self.get_piece(r1, c1)
         captured = self.get_piece(r2, c2)
         
-        # 保存当前状态到历史
+        # Save current state for undo
         self.history.append(self.to_fen())
         self.move_history.append((from_pos, to_pos))
         
-        # 执行移动
+        # Execute the move
         self.set_piece(r2, c2, piece)
         self.set_piece(r1, c1, None)
         
-        # 切换玩家
+        # Switch player
         self.current_player = -self.current_player
         
         return captured
     
     def undo_move(self) -> bool:
-        """
-        悔棋
+        """Undo the last move.
         
         Returns:
-            是否成功悔棋
+            True if undo was successful, False if no history.
         """
         if not self.history:
             return False
         
-        # 恢复上一个状态
         last_fen = self.history.pop()
         self.move_history.pop()
         self.load_fen(last_fen)
@@ -152,22 +205,25 @@ class Board:
         return True
     
     def copy(self) -> 'Board':
-        """创建棋盘的深拷贝"""
+        """Create a deep copy of the board.
+        
+        Returns:
+            A new Board instance with the same state.
+        """
         new_board = Board()
         new_board.load_fen(self.to_fen())
         new_board.history = self.history.copy()
         new_board.move_history = self.move_history.copy()
         return new_board
     
-    def find_king(self, color: int) -> Optional[tuple[int, int]]:
-        """
-        查找指定颜色的将/帅位置
+    def find_king(self, color: int) -> Optional[Tuple[int, int]]:
+        """Find the position of a player's King.
         
         Args:
-            color: RED 或 BLACK
+            color: Player color (RED or BLACK).
         
         Returns:
-            (row, col) 或 None
+            (row, col) tuple or None if not found.
         """
         king = 'K' if color == RED else 'k'
         for row in range(BOARD_ROWS):
@@ -176,15 +232,16 @@ class Board:
                     return (row, col)
         return None
     
-    def get_all_pieces(self, color: int) -> list[tuple[int, int, str]]:
-        """
-        获取指定颜色的所有棋子
+    def get_all_pieces(
+        self, color: int
+    ) -> List[Tuple[int, int, str]]:
+        """Get all pieces belonging to a player.
         
         Args:
-            color: RED 或 BLACK
+            color: Player color (RED or BLACK).
         
         Returns:
-            [(row, col, piece), ...]
+            List of (row, col, piece) tuples.
         """
         pieces = []
         target_set = RED_PIECES if color == RED else BLACK_PIECES
@@ -198,16 +255,12 @@ class Board:
         return pieces
     
     def __str__(self) -> str:
-        """打印棋盘(用于调试)"""
-        lines = []
-        lines.append("  0 1 2 3 4 5 6 7 8")
+        """Return string representation of the board for debugging."""
+        lines = ["  0 1 2 3 4 5 6 7 8"]
         for row in range(BOARD_ROWS - 1, -1, -1):
             line = f"{row} "
             for col in range(BOARD_COLS):
                 piece = self.board[row][col]
-                if piece:
-                    line += piece + " "
-                else:
-                    line += ". "
+                line += (piece if piece else '.') + ' '
             lines.append(line)
-        return "\n".join(lines)
+        return '\n'.join(lines)

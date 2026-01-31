@@ -1,15 +1,17 @@
-"""
-Minimax search algorithm with alpha-beta pruning.
+"""Minimax search algorithm with alpha-beta pruning.
+
+This module provides the minimax search algorithm for the Chinese Chess AI,
+including alpha-beta pruning optimization.
+
+Typical usage example:
+    best_move = get_best_move(board, '中级')
 """
 
 from typing import Optional, Tuple
-import sys
-sys.path.append('..')
 
+from ai.evaluation import DIFFICULTY_DEPTHS, evaluate_board
 from core.board import Board
 from core.rules import RuleEngine
-from core.constants import RED, BLACK
-from .evaluation import evaluate_board
 
 
 def minimax_search(
@@ -19,18 +21,17 @@ def minimax_search(
     beta: int = 999999,
     maximizing: bool = True
 ) -> Tuple[int, Optional[Tuple[Tuple[int, int], Tuple[int, int]]]]:
-    """
-    Minimax搜索算法(带Alpha-Beta剪枝)
-    
+    """Minimax search with alpha-beta pruning.
+
     Args:
-        board: 当前棋盘状态
-        depth: 搜索深度
-        alpha: Alpha值
-        beta: Beta值
-        maximizing: 是否为最大化节点
-    
+        board: Current board state.
+        depth: Search depth.
+        alpha: Alpha value for pruning.
+        beta: Beta value for pruning.
+        maximizing: Whether this is a maximizing node.
+
     Returns:
-        (评估分数, 最佳移动)
+        Tuple of (evaluation_score, best_move).
     """
     # 创建规则引擎
     rule_engine = RuleEngine(board)
@@ -112,19 +113,18 @@ def minimax_search(
         return min_eval, best_move
 
 
-def get_best_move(board: Board, difficulty: str = '中级') -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
-    """
-    获取最佳移动
-    
+def get_best_move(
+    board: Board, difficulty: str = '中级'
+) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
+    """Get the best move for the current player.
+
     Args:
-        board: 当前棋盘状态
-        difficulty: 难度等级
-    
+        board: Current board state.
+        difficulty: Difficulty level ('小白', '初级', '中级', '高级', '大师').
+
     Returns:
-        最佳移动 ((from_row, from_col), (to_row, to_col))
+        Best move as ((from_row, from_col), (to_row, to_col)).
     """
-    from .evaluation import DIFFICULTY_DEPTHS
-    
     depth = DIFFICULTY_DEPTHS.get(difficulty, 3)
     _, best_move = minimax_search(board, depth, maximizing=True)
     

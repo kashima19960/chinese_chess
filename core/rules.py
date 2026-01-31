@@ -1,416 +1,529 @@
-"""
-Rule engine for move validation and game state checking.
+"""Rule engine for move validation and game state checking.
+
+This module provides the RuleEngine class which handles all chess rule
+validation including move legality, check detection, and game end conditions.
+
+Typical usage example:
+    engine = RuleEngine(board)
+    moves = engine.get_legal_moves(0, 0)
+    is_check = engine.is_in_check(RED)
 """
 
-from typing import Optional
-from .constants import *
-from .board import Board
+from typing import List, Optional, Tuple
+
+from core.board import Board
+from core.constants import (
+    BLACK,
+    RED,
+    RIVER_ROW,
+    can_cross_river,
+    get_piece_color,
+    is_in_bounds,
+    is_in_palace,
+)
 
 
 class RuleEngine:
-    """中国象棋规则引擎"""
-    
-    def __init__(self, board: Board):
-        self.board = board
-    
-    def get_legal_moves(self, row: int, col: int) -> list[tuple[int, int]]:
-        """
-        获取指定位置棋子的所有合法移动
-        
+    """Chinese Chess rule validation engine.
+
+    Handles all rule checking including:
+    - Legal move generation for each piece type
+    - Check and checkmate detection
+    - Stalemate detection
+    - Flying general rule validation
+
+    Attributes:
+        board: The Board instance to validate moves on.
+    """
+
+    def __init__(self, board: Board) -> None:
+        """Initialize the rule engine.
+
         Args:
-            row, col: 棋子位置
-        
+            board: The Board instance to use for validation.
+        """
+        self.board = board
+
+    def get_legal_moves(self, row: int, col: int) -> List[Tuple[int, int]]:
+        """Get all legal moves for a piece at the given position.
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+
         Returns:
-            合法目标位置列表 [(row, col), ...]
+            List of legal destination positions (row, col).
         """
         piece = self.board.get_piece(row, col)
         if not piece:
             return []
-        
-        # 获取所有可能的移动
+
+        # Get pseudo-legal moves (ignoring check)
         moves = self._get_pseudo_legal_moves(row, col, piece)
-        
-        # 过滤掉会导致被将军的移动
+
+        # Filter moves that would leave the king in check
         legal_moves = []
         for to_pos in moves:
             if self._is_legal_move((row, col), to_pos):
                 legal_moves.append(to_pos)
-        
+
         return legal_moves
-    
-    def _get_pseudo_legal_moves(self, row: int, col: int, piece: str) -> list[tuple[int, int]]:
-        """获取伪合法移动(不考虑将军)"""
+
+    def _get_pseudo_legal_moves(
+        self, row: int, col: int, piece: str
+    ) -> List[Tuple[int, int]]:
+        """Get pseudo-legal moves (not checking for check).
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+            piece: The piece character.
+
+        Returns:
+            List of possible destination positions.
+        """
         piece_type = piece.upper()
         color = get_piece_color(piece)
-        
-        if piece_type == 'R':  # 车
-            return self._get_rook_moves(row, col, color)
-        elif piece_type == 'N':  # 马
-            return self._get_knight_moves(row, col, color)
-        elif piece_type == 'B':  # 相/象
-            return self._get_bishop_moves(row, col, color)
-        elif piece_type == 'A':  # 仕/士
-            return self._get_advisor_moves(row, col, color)
-        elif piece_type == 'K':  # 帅/将
-            return self._get_king_moves(row, col, color)
-        elif piece_type == 'C':  # 炮
-            return self._get_cannon_moves(row, col, color)
-        elif piece_type == 'P':  # 兵/卒
-            return self._get_pawn_moves(row, col, color)
-        
+
+        move_handlers = {
+            'R': self._get_rook_moves,
+            'N': self._get_knight_moves,
+            'B': self._get_bishop_moves,
+            'A': self._get_advisor_moves,
+            'K': self._get_king_moves,
+            'C': self._get_cannon_moves,
+            'P': self._get_pawn_moves,
+        }
+
+        handler = move_handlers.get(piece_type)
+        if handler:
+            return handler(row, col, color)
         return []
-    
-    def _get_rook_moves(self, row: int, col: int, color: int) -> list[tuple[int, int]]:
-        """车的移动:直线移动"""
+
+    def _get_rook_moves(
+        self, row: int, col: int, color: int
+    ) -> List[Tuple[int, int]]:
+        """Get rook (车) moves: straight lines in all four directions.
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+            color: Piece color (RED or BLACK).
+
+        Returns:
+            List of possible destination positions.
+        """
         moves = []
-        
-        # 四个方向: 上下左右
         directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        
+
         for dr, dc in directions:
             r, c = row + dr, col + dc
             while is_in_bounds(r, c):
-                target_piece = self.board.get_piece(r, c)
-                if target_piece is None:
+                target = self.board.get_piece(r, c)
+                if target is None:
                     moves.append((r, c))
-                elif get_piece_color(target_piece) != color:
+                elif get_piece_color(target) != color:
                     moves.append((r, c))
                     break
                 else:
                     break
                 r += dr
                 c += dc
-        
+
         return moves
-    
-    def _get_knight_moves(self, row: int, col: int, color: int) -> list[tuple[int, int]]:
-        """马的移动:日字,检测蹩腿"""
+
+    def _get_knight_moves(
+        self, row: int, col: int, color: int
+    ) -> List[Tuple[int, int]]:
+        """Get knight (马) moves: L-shape with blocking check.
+
+        The knight moves in an L-shape but can be blocked by pieces
+        adjacent to its starting position.
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+            color: Piece color (RED or BLACK).
+
+        Returns:
+            List of possible destination positions.
+        """
         moves = []
-        
-        # 8个可能的移动方向: (dr, dc, 蹩腿检测位置)
+
+        # (delta_row, delta_col, blocking_position)
         knight_moves = [
-            (2, 1, (1, 0)),   # 向上
+            (2, 1, (1, 0)),
             (2, -1, (1, 0)),
-            (-2, 1, (-1, 0)), # 向下
+            (-2, 1, (-1, 0)),
             (-2, -1, (-1, 0)),
-            (1, 2, (0, 1)),   # 向右
+            (1, 2, (0, 1)),
             (-1, 2, (0, 1)),
-            (1, -2, (0, -1)), # 向左
+            (1, -2, (0, -1)),
             (-1, -2, (0, -1)),
         ]
-        
+
         for dr, dc, (block_dr, block_dc) in knight_moves:
             r2, c2 = row + dr, col + dc
             block_r, block_c = row + block_dr, col + block_dc
-            
-            # 检查目标位置合法性
+
             if not is_in_bounds(r2, c2):
                 continue
-            
-            # 检查蹩腿
+
+            # Check for blocking piece (蹩马腿)
             if self.board.get_piece(block_r, block_c) is not None:
                 continue
-            
-            # 检查目标位置是否为己方棋子
-            target_piece = self.board.get_piece(r2, c2)
-            if target_piece is None or get_piece_color(target_piece) != color:
+
+            target = self.board.get_piece(r2, c2)
+            if target is None or get_piece_color(target) != color:
                 moves.append((r2, c2))
-        
+
         return moves
-    
-    def _get_bishop_moves(self, row: int, col: int, color: int) -> list[tuple[int, int]]:
-        """相/象的移动:田字,检测塞象眼,不能过河"""
+
+    def _get_bishop_moves(
+        self, row: int, col: int, color: int
+    ) -> List[Tuple[int, int]]:
+        """Get bishop (相/象) moves: diagonal with blocking, no river crossing.
+
+        The bishop moves diagonally two points but can be blocked
+        and cannot cross the river.
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+            color: Piece color (RED or BLACK).
+
+        Returns:
+            List of possible destination positions.
+        """
         moves = []
-        
-        # 4个可能的移动方向
+
+        # (delta_row, delta_col, blocking_position)
         bishop_moves = [
-            (2, 2, (1, 1)),    # 右上
-            (2, -2, (1, -1)),  # 左上
-            (-2, 2, (-1, 1)),  # 右下
-            (-2, -2, (-1, -1)) # 左下
+            (2, 2, (1, 1)),
+            (2, -2, (1, -1)),
+            (-2, 2, (-1, 1)),
+            (-2, -2, (-1, -1)),
         ]
-        
+
         for dr, dc, (block_dr, block_dc) in bishop_moves:
             r2, c2 = row + dr, col + dc
             block_r, block_c = row + block_dr, col + block_dc
-            
-            # 检查目标位置合法性
+
             if not is_in_bounds(r2, c2):
                 continue
-            
-            # 检查是否过河
-            if not can_cross_river('B' if color == RED else 'b', r2):
+
+            # Check river crossing
+            piece = 'B' if color == RED else 'b'
+            if not can_cross_river(piece, r2):
                 continue
-            
-            # 检查塞象眼
+
+            # Check blocking piece (塞象眼)
             if self.board.get_piece(block_r, block_c) is not None:
                 continue
-            
-            # 检查目标位置是否为己方棋子
-            target_piece = self.board.get_piece(r2, c2)
-            if target_piece is None or get_piece_color(target_piece) != color:
+
+            target = self.board.get_piece(r2, c2)
+            if target is None or get_piece_color(target) != color:
                 moves.append((r2, c2))
-        
+
         return moves
-    
-    def _get_advisor_moves(self, row: int, col: int, color: int) -> list[tuple[int, int]]:
-        """仕/士的移动:斜线一步,限制在九宫内"""
+
+    def _get_advisor_moves(
+        self, row: int, col: int, color: int
+    ) -> List[Tuple[int, int]]:
+        """Get advisor (仕/士) moves: diagonal within palace.
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+            color: Piece color (RED or BLACK).
+
+        Returns:
+            List of possible destination positions.
+        """
         moves = []
-        
-        # 4个斜向移动
         directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
-        
+
         for dr, dc in directions:
             r2, c2 = row + dr, col + dc
-            
-            # 检查是否在九宫内
+
             if not is_in_palace(r2, c2, color):
                 continue
-            
-            # 检查目标位置是否为己方棋子
-            target_piece = self.board.get_piece(r2, c2)
-            if target_piece is None or get_piece_color(target_piece) != color:
+
+            target = self.board.get_piece(r2, c2)
+            if target is None or get_piece_color(target) != color:
                 moves.append((r2, c2))
-        
+
         return moves
-    
-    def _get_king_moves(self, row: int, col: int, color: int) -> list[tuple[int, int]]:
-        """帅/将的移动:直线一步,限制在九宫内"""
+
+    def _get_king_moves(
+        self, row: int, col: int, color: int
+    ) -> List[Tuple[int, int]]:
+        """Get king (帅/将) moves: orthogonal within palace.
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+            color: Piece color (RED or BLACK).
+
+        Returns:
+            List of possible destination positions.
+        """
         moves = []
-        
-        # 4个方向: 上下左右
         directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        
+
         for dr, dc in directions:
             r2, c2 = row + dr, col + dc
-            
-            # 检查是否在九宫内
+
             if not is_in_palace(r2, c2, color):
                 continue
-            
-            # 检查目标位置是否为己方棋子
-            target_piece = self.board.get_piece(r2, c2)
-            if target_piece is None or get_piece_color(target_piece) != color:
+
+            target = self.board.get_piece(r2, c2)
+            if target is None or get_piece_color(target) != color:
                 moves.append((r2, c2))
-        
+
         return moves
-    
-    def _get_cannon_moves(self, row: int, col: int, color: int) -> list[tuple[int, int]]:
-        """炮的移动:直线移动,吃子需要跳一个棋子"""
+
+    def _get_cannon_moves(
+        self, row: int, col: int, color: int
+    ) -> List[Tuple[int, int]]:
+        """Get cannon (炮) moves: straight lines, jump to capture.
+
+        The cannon moves like a rook but must jump exactly one piece
+        to capture.
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+            color: Piece color (RED or BLACK).
+
+        Returns:
+            List of possible destination positions.
+        """
         moves = []
-        
-        # 四个方向: 上下左右
         directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        
+
         for dr, dc in directions:
-            jumped = False  # 是否已经跳过一个棋子
+            jumped = False
             r, c = row + dr, col + dc
-            
+
             while is_in_bounds(r, c):
-                target_piece = self.board.get_piece(r, c)
-                
-                if target_piece is None:
-                    # 空位
+                target = self.board.get_piece(r, c)
+
+                if target is None:
                     if not jumped:
                         moves.append((r, c))
                 else:
-                    # 有棋子
                     if not jumped:
-                        jumped = True  # 跳过这个棋子
+                        jumped = True
                     else:
-                        # 已经跳过一个,可以吃子
-                        if get_piece_color(target_piece) != color:
+                        if get_piece_color(target) != color:
                             moves.append((r, c))
                         break
-                
+
                 r += dr
                 c += dc
-        
+
         return moves
-    
-    def _get_pawn_moves(self, row: int, col: int, color: int) -> list[tuple[int, int]]:
-        """兵/卒的移动:未过河只能前进,过河后可以横走"""
+
+    def _get_pawn_moves(
+        self, row: int, col: int, color: int
+    ) -> List[Tuple[int, int]]:
+        """Get pawn (兵/卒) moves: forward, sideways after crossing river.
+
+        Args:
+            row: Board row of the piece.
+            col: Board column of the piece.
+            color: Piece color (RED or BLACK).
+
+        Returns:
+            List of possible destination positions.
+        """
         moves = []
-        
-        # 判断是否过河
+
         if color == RED:
             crossed = row > RIVER_ROW
-            forward = 1  # 红方向上走
+            forward = 1
         else:
             crossed = row < RIVER_ROW + 1
-            forward = -1  # 黑方向下走
-        
-        # 前进
+            forward = -1
+
+        # Forward move
         r2, c2 = row + forward, col
         if is_in_bounds(r2, c2):
-            target_piece = self.board.get_piece(r2, c2)
-            if target_piece is None or get_piece_color(target_piece) != color:
+            target = self.board.get_piece(r2, c2)
+            if target is None or get_piece_color(target) != color:
                 moves.append((r2, c2))
-        
-        # 过河后可以横走
+
+        # Sideways moves after crossing river
         if crossed:
             for dc in [-1, 1]:
                 r2, c2 = row, col + dc
                 if is_in_bounds(r2, c2):
-                    target_piece = self.board.get_piece(r2, c2)
-                    if target_piece is None or get_piece_color(target_piece) != color:
+                    target = self.board.get_piece(r2, c2)
+                    if target is None or get_piece_color(target) != color:
                         moves.append((r2, c2))
-        
+
         return moves
-    
-    def _is_legal_move(self, from_pos: tuple[int, int], to_pos: tuple[int, int]) -> bool:
-        """
-        检查移动是否合法(考虑将军和飞将)
-        
+
+    def _is_legal_move(
+        self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]
+    ) -> bool:
+        """Check if a move is legal (considering check and flying general).
+
         Args:
-            from_pos: 起始位置
-            to_pos: 目标位置
-        
+            from_pos: Starting position (row, col).
+            to_pos: Target position (row, col).
+
         Returns:
-            是否合法
+            True if the move is legal, False otherwise.
         """
-        # 创建临时棋盘执行移动
+        # Create temporary board to test the move
         temp_board = self.board.copy()
         r1, c1 = from_pos
         r2, c2 = to_pos
-        
+
         piece = temp_board.get_piece(r1, c1)
         if not piece:
             return False
-        
+
         color = get_piece_color(piece)
-        
-        # 执行移动
+
+        # Execute the move
         temp_board.set_piece(r2, c2, piece)
         temp_board.set_piece(r1, c1, None)
-        
-        # 创建临时规则引擎
+
+        # Create temporary rule engine
         temp_engine = RuleEngine(temp_board)
-        
-        # 检查是否被将军
+
+        # Check if move leaves own king in check
         if temp_engine.is_in_check(color):
             return False
-        
-        # 检查飞将
+
+        # Check for flying general
         if temp_engine._is_flying_general():
             return False
-        
+
         return True
-    
+
     def is_in_check(self, color: int) -> bool:
-        """
-        检查指定颜色是否被将军
-        
+        """Check if the specified color's king is in check.
+
         Args:
-            color: RED 或 BLACK
-        
+            color: RED or BLACK.
+
         Returns:
-            是否被将军
+            True if in check, False otherwise.
         """
-        # 找到己方将/帅
+        # Find the king
         king_pos = self.board.find_king(color)
         if not king_pos:
             return False
-        
-        # 检查敌方所有棋子是否能攻击到将/帅
+
+        # Check if any enemy piece can attack the king
         enemy_color = -color
         enemy_pieces = self.board.get_all_pieces(enemy_color)
-        
+
         for r, c, piece in enemy_pieces:
             pseudo_moves = self._get_pseudo_legal_moves(r, c, piece)
             if king_pos in pseudo_moves:
                 return True
-        
+
         return False
-    
+
     def _is_flying_general(self) -> bool:
-        """检查是否出现飞将(两个将在同一列且之间无棋子)"""
+        """Check for flying general (kings facing each other).
+
+        The flying general rule states that the two kings cannot
+        face each other on the same column with no pieces between.
+
+        Returns:
+            True if flying general condition exists, False otherwise.
+        """
         red_king_pos = self.board.find_king(RED)
         black_king_pos = self.board.find_king(BLACK)
-        
+
         if not red_king_pos or not black_king_pos:
             return False
-        
+
         r1, c1 = red_king_pos
         r2, c2 = black_king_pos
-        
-        # 检查是否在同一列
+
+        # Must be on the same column
         if c1 != c2:
             return False
-        
-        # 检查之间是否有棋子
+
+        # Check if there are pieces between the kings
         min_row = min(r1, r2)
         max_row = max(r1, r2)
-        
+
         for row in range(min_row + 1, max_row):
             if self.board.get_piece(row, c1) is not None:
                 return False
-        
+
         return True
-    
+
     def is_checkmate(self, color: int) -> bool:
-        """
-        检查指定颜色是否被将死
-        
+        """Check if the specified color is checkmated.
+
         Args:
-            color: RED 或 BLACK
-        
+            color: RED or BLACK.
+
         Returns:
-            是否被将死
+            True if checkmated, False otherwise.
         """
-        # 必须先被将军
+        # Must be in check first
         if not self.is_in_check(color):
             return False
-        
-        # 检查是否有任何合法移动
+
+        # Check if there are any legal moves
         pieces = self.board.get_all_pieces(color)
         for r, c, piece in pieces:
             legal_moves = self.get_legal_moves(r, c)
             if legal_moves:
                 return False
-        
+
         return True
-    
+
     def is_stalemate(self, color: int) -> bool:
-        """
-        检查指定颜色是否困毙(无子可动但未被将军)
-        
+        """Check if the specified color is stalemated.
+
+        Stalemate occurs when a player has no legal moves but is not in check.
+
         Args:
-            color: RED 或 BLACK
-        
+            color: RED or BLACK.
+
         Returns:
-            是否困毙
+            True if stalemated, False otherwise.
         """
-        # 不能被将军
+        # Cannot be in check
         if self.is_in_check(color):
             return False
-        
-        # 检查是否有任何合法移动
+
+        # Check if there are any legal moves
         pieces = self.board.get_all_pieces(color)
         for r, c, piece in pieces:
             legal_moves = self.get_legal_moves(r, c)
             if legal_moves:
                 return False
-        
+
         return True
-    
+
     def get_game_result(self) -> Optional[int]:
-        """
-        获取游戏结果
-        
+        """Get the game result.
+
         Returns:
-            RED: 红方胜
-            BLACK: 黑方胜
-            None: 游戏未结束
+            RED: Red wins.
+            BLACK: Black wins.
+            None: Game is not over.
         """
         current_color = self.board.current_player
-        
-        # 检查当前玩家是否被将死
+
+        # Check if current player is checkmated
         if self.is_checkmate(current_color):
-            return -current_color  # 对手获胜
-        
-        # 检查当前玩家是否困毙
+            return -current_color
+
+        # Check if current player is stalemated
         if self.is_stalemate(current_color):
-            return -current_color  # 对手获胜
-        
+            return -current_color
+
         return None

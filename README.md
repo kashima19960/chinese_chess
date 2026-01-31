@@ -21,7 +21,6 @@
 ### 界面功能
 - ✅ 无边框现代化界面
 - ✅ 自定义标题栏（可拖动、最小化、最大化）
-- ✅ 18种Material Design主题（深色+浅色）
 - ✅ 木纹棋盘背景
 - ✅ 棋子移动动画效果
 - ✅ 选中高亮+合法移动标记
@@ -58,7 +57,7 @@ python -m venv .venv
 
 3. 安装依赖
 ```bash
-pip install PyQt5 qt-material
+pip install PyQt5
 ```
 
 4. 运行程序
@@ -119,7 +118,6 @@ chinese_chess/
 
 - **Python 3.8+**: 编程语言
 - **PyQt5**: GUI框架
-- **qt-material**: Material Design主题
 - **Minimax算法**: AI搜索算法
 - **Alpha-Beta剪枝**: 搜索优化
 
@@ -150,6 +148,5 @@ kashima19960
 - 🎉 首次发布
 - ✅ 完整的象棋规则引擎
 - ✅ AI对战功能（5个难度）
-- ✅ 现代化Material Design界面
-- ✅ 18种主题可选
+- ✅ 现代化界面
 - ✅ 高DPI屏幕支持

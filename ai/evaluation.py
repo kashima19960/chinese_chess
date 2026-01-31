@@ -1,13 +1,25 @@
-"""
-Board evaluation functions for AI.
+"""Board evaluation functions for AI.
+
+This module provides evaluation functions and position-square tables
+for the AI to assess board positions.
+
+Typical usage example:
+    score = evaluate_board(board, RED)
+    depth = DIFFICULTY_DEPTHS['中级']
 """
 
-from typing import Dict
-import sys
-sys.path.append('..')
+from typing import Dict, List
 
-from core.constants import *
 from core.board import Board
+from core.constants import (
+    BLACK,
+    BOARD_COLS,
+    BOARD_ROWS,
+    PIECE_VALUES,
+    RED,
+    RIVER_ROW,
+    get_piece_color,
+)
 
 # ===========================
 # 难度等级对应的搜索深度
@@ -122,12 +134,19 @@ BISHOP_PST_RED = [
 ]
 
 
-def _flip_pst(pst: list[list[int]]) -> list[list[int]]:
-    """翻转位置价值表(用于黑方)"""
+def _flip_pst(pst: List[List[int]]) -> List[List[int]]:
+    """Flip a position-square table for the opposite color.
+
+    Args:
+        pst: The position-square table to flip.
+
+    Returns:
+        Flipped position-square table.
+    """
     return [row[:] for row in reversed(pst)]
 
 
-# 黑方的位置价值表(翻转红方的)
+# Black's position-square tables (flipped from red)
 PAWN_PST_BLACK = _flip_pst(PAWN_PST_RED)
 KING_PST_BLACK = _flip_pst(KING_PST_RED)
 ADVISOR_PST_BLACK = _flip_pst(ADVISOR_PST_RED)
@@ -135,15 +154,15 @@ BISHOP_PST_BLACK = _flip_pst(BISHOP_PST_RED)
 
 
 def get_position_value(piece: str, row: int, col: int) -> int:
-    """
-    获取棋子在指定位置的位置价值
-    
+    """Get the positional value for a piece at a given location.
+
     Args:
-        piece: 棋子类型
-        row, col: 位置
-    
+        piece: The piece character.
+        row: Board row.
+        col: Board column.
+
     Returns:
-        位置价值
+        Positional value bonus.
     """
     piece_type = piece.upper()
     color = get_piece_color(piece)
@@ -171,15 +190,14 @@ def get_position_value(piece: str, row: int, col: int) -> int:
 
 
 def evaluate_board(board: Board, perspective_color: int) -> int:
-    """
-    评估棋盘局势
-    
+    """Evaluate the board position from a player's perspective.
+
     Args:
-        board: 棋盘状态
-        perspective_color: 评估视角(RED或BLACK)
-    
+        board: The board state to evaluate.
+        perspective_color: The color to evaluate for (RED or BLACK).
+
     Returns:
-        评估分数,正数表示有利,负数表示不利
+        Evaluation score. Positive indicates advantage, negative disadvantage.
     """
     score = 0
     
